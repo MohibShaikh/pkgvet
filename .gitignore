@@ -9,3 +9,6 @@ dist/
 docs/superpowers/
 CLAUDE.md
 .superpowers/
+
+# JetBrains IDE files
+.idea/
