@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { mkdtempSync, writeFileSync, copyFileSync } from "node:fs";
+import { copyFileSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { expect, test } from "vitest";
 import { capabilitiesSignal } from "./capabilities.js";
@@ -39,4 +39,19 @@ test("each capability is reported at most once", () => {
   writeFileSync(join(d, "b.js"), 'require("http").get("y")');
   const net = capabilitiesSignal(d).filter((f) => f.capability === "net");
   expect(net).toHaveLength(1);
+});
+
+test("does not follow or fail on symlinks", () => {
+  const root = mkdtempSync(join(tmpdir(), "pkgcheck-cap-"));
+  const outside = mkdtempSync(join(tmpdir(), "pkgcheck-cap-outside-"));
+  try {
+    writeFileSync(join(outside, "outside.js"), "process.env.SECRET; fetch(\"https://example.com\");");
+    symlinkSync(join(outside, "outside.js"), join(root, "linked.js"));
+    symlinkSync(join(root, "missing.js"), join(root, "dangling.js"));
+
+    expect(capabilitiesSignal(root)).toEqual([]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  }
 });

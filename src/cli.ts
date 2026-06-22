@@ -52,8 +52,9 @@ export async function run(argv: string[]): Promise<number> {
 
   try {
     await program.parseAsync(argv);
-  } catch {
-    return 2; // commander usage error
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    return code === "commander.helpDisplayed" ? 0 : 2;
   }
   return exitCode;
 }

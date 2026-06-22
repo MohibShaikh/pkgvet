@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "@babel/parser";
 import type { Capability, Finding } from "../types.js";
@@ -39,9 +39,9 @@ function listSourceFiles(dir: string): string[] {
     for (const entry of readdirSync(d)) {
       if (entry === "node_modules" || entry === ".git") continue;
       const p = join(d, entry);
-      const s = statSync(p);
+      const s = lstatSync(p);
       if (s.isDirectory()) walk(p);
-      else if (SOURCE_EXT.some((e) => p.endsWith(e))) out.push(p);
+      else if (s.isFile() && SOURCE_EXT.some((e) => p.endsWith(e))) out.push(p);
     }
   };
   walk(dir);

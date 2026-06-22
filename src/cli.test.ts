@@ -33,3 +33,30 @@ test("a failing --llm second opinion does not change the exit code", async () =>
   const code = await run(["node", "cli", "inspect", "x", "--llm"]);
   expect(code).toBe(0); // llm failure must NOT flip the exit code to 2
 });
+
+test("top-level help exits successfully", async () => {
+  const write = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  try {
+    await expect(run(["node", "cli", "--help"])).resolves.toBe(0);
+  } finally {
+    write.mockRestore();
+  }
+});
+
+test("command help exits successfully", async () => {
+  const write = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  try {
+    await expect(run(["node", "cli", "inspect", "--help"])).resolves.toBe(0);
+  } finally {
+    write.mockRestore();
+  }
+});
+
+test("usage errors still exit with code 2", async () => {
+  const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    await expect(run(["node", "cli", "inspect"])).resolves.toBe(2);
+  } finally {
+    write.mockRestore();
+  }
+});

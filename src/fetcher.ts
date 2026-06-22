@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { lstatSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pacote from "pacote";
@@ -11,12 +11,13 @@ export interface FetchedPackage {
 
 export class FetchError extends Error {}
 
-function dirSize(dir: string): number {
+export function dirSize(dir: string): number {
   let total = 0;
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
-    const s = statSync(p);
-    total += s.isDirectory() ? dirSize(p) : s.size;
+    const s = lstatSync(p);
+    if (s.isDirectory()) total += dirSize(p);
+    else if (s.isFile()) total += s.size;
   }
   return total;
 }
@@ -28,6 +29,7 @@ export async function fetchPackage(spec: string): Promise<FetchedPackage> {
     // and guards against path traversal in tar entries.
     await pacote.extract(spec, dir);
   } catch (err) {
+    rmSync(dir, { recursive: true, force: true });
     throw new FetchError(`could not fetch "${spec}": ${(err as Error).message}`);
   }
 

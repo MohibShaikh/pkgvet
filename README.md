@@ -1,71 +1,91 @@
 # pkgcheck
 
-> Working name — subject to change.
-
-A pre-flight inspector for npm packages. It checks a package **before** you run or install
-it: downloads the package, statically reads the code **without executing it**, and tells you
-how risky it looks and what it can touch.
-
-`npm`/`npx` show you a version number and an "is it okay to proceed?" prompt with no real
-information. `pkgcheck` replaces that blind moment with an actual answer — for a human at a
-terminal, and for an AI agent about to run an `npx` command.
-
-## What it looks like
-
-> Illustrative — the engine is under construction. Output shape is what we're building toward.
-
-```text
-$ pkgcheck inspect left-pad
-─ left-pad@1.3.0 · 6 kB · published 6y ago by stamat
-  ✓ no install scripts   ✓ not obfuscated   ✓ exact name match
-  permissions: fs:read
-  risk: LOW (8/100)
-
-$ pkgcheck inspect is0dd
-─ is0dd@1.0.0 · 4 kB · published 2h ago by a-new-name
-  ✗ postinstall script      ✗ obfuscated source
-  ✗ looks like a typo of "is-odd" (very popular)
-  permissions: fs:read · net · shell · env
-  risk: HIGH (91/100)
-  why: brand-new publisher + install script reaching the network and reading env
-       is the classic credential-exfiltration shape. Do not run.
-```
-
-## Status
-
-Working. The analysis engine is implemented: it resolves and downloads a package, statically
-inspects it without executing it, and prints a calibrated risk verdict.
+A pre-flight inspector for npm packages. Downloads and statically analyzes a package
+**without executing any code**, then reports what it can touch and how risky it looks.
 
 ## Usage
 
 ```sh
-npm install        # install dependencies
-npm run build      # compile to dist/
+# Install
+npm install -g pkgcheck
 
-node dist/cli.js inspect lodash                 # readable report
-node dist/cli.js inspect lodash --json          # the same verdict as data, for agents/scripts
-node dist/cli.js inspect is0dd --fail-on high   # exits non-zero if risk is too high (for CI/agents)
-node dist/cli.js inspect foo --llm              # opt-in second opinion using YOUR OWN api key
+# Inspect a package
+pkgcheck inspect <package-spec>
+
+# Or with npx (no install needed)
+npx pkgcheck inspect <package-spec>
 ```
 
-The `--llm` flag is strictly opt-in and additive: it only appends a one-line second opinion to
-the human report when `ANTHROPIC_API_KEY` is set. It never changes the deterministic score,
-the verdict, or the exit code, and the tool works fully without it.
+### Examples
+
+```sh
+# Human-readable report
+pkgcheck inspect shelljs@0.8.5
+
+# JSON output for scripts/agents
+pkgcheck inspect shelljs --json
+
+# Fail CI if risk level meets a threshold (exit 1)
+pkgcheck inspect is0dd --fail-on med
+
+# Opt-in LLM second opinion (requires API key)
+pkgcheck inspect shelljs --llm
+```
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Clean — risk is below threshold (or no threshold set) |
+| `1` | Risk meets or exceeds `--fail-on` threshold |
+| `2` | Resolution / download / parse failure (never treated as safe) |
 
 ## What it checks
 
-- **Paperwork:** install/lifecycle scripts, publisher & release recency, typosquat distance
-  to popular names, deprecation, size/dependency anomalies.
-- **Permissions (what the code can touch):** reads/writes files, network, runs shell
-  commands, reads env/secrets, obfuscated source.
+The tool runs four static analysis passes on the unpacked package:
 
-These combine into a conservative **risk score + level** with a plain-English "why."
+| Signal | What it looks for |
+|---|---|
+| **Manifest** | `preinstall`/`install`/`postinstall` scripts, `deprecated` flag |
+| **Publisher** | Version published within last 7 days (new accounts are a risk signal) |
+| **Typosquat** | Levenshtein + homoglyph distance to 20 popular package names |
+| **Capabilities** | AST + regex scan of `.js`/`.ts`/`.cjs`/`.mjs` files for patterns indicating: `fs:read`, `fs:write`, `net`, `shell`, `env`, `obfuscated` |
+
+Each finding has a weight. The scorer combines them into a 0–100 score and a
+`low` / `med` / `high` level, with a bonus for dangerous combinations (e.g.
+install script + network + env reads = classic credential exfil shape).
+
+## --llm (second opinion)
+
+Strictly opt-in. Set one of these environment variables:
+
+| Env var | Provider | Model | Cost |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | Anthropic | `claude-opus-4-8` | Paid |
+| `OPENAI_API_KEY` | OpenAI | `gpt-5.5` | Paid |
+| `GROQ_API_KEY` | Groq | `llama-3.3-70b-versatile` | Free |
+| `GEMINI_API_KEY` | Gemini | `gemini-2.0-flash` | Free |
+
+The tool sends only the package name, version, risk level, and detected
+capabilities (no source code). Each call is capped at 100 output tokens with
+a 15-second timeout. A failing or missing API key is silently ignored — it
+never changes the deterministic score, verdict, or exit code.
 
 ## Principles
 
 - **Never executes the package.** Static analysis only.
-- **Works offline, free, and deterministic by default.** The `--llm` pass is strictly opt-in.
-- **Calibrated against false positives.** A noisy tool gets uninstalled.
+- **Offline, free, and deterministic by default.** The `--llm` pass is opt-in.
+- **Conservative weighting.** A benign library that only reads files stays `LOW`.
+  Risk is driven by dangerous *combinations*, not single capabilities.
+
+## Install
+
+```sh
+npm install -g pkgcheck
+npm run build    # compile TypeScript to dist/
+```
+
+Requires Node >= 18.
 
 ## License
 
