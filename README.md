@@ -33,16 +33,24 @@ $ pkgcheck inspect is0dd
 
 ## Status
 
-Early. Scaffold only — the analysis engine is being built against an approved design.
+Working. The analysis engine is implemented: it resolves and downloads a package, statically
+inspects it without executing it, and prints a calibrated risk verdict.
 
-## Planned usage
+## Usage
 
 ```sh
-pkgcheck inspect lodash                 # readable report
-pkgcheck inspect lodash --json          # the same verdict as data, for agents/scripts
-pkgcheck inspect is0dd --fail-on high   # exits non-zero if risk is too high (for CI/agents)
-pkgcheck inspect foo --llm              # opt-in second opinion using YOUR OWN api key
+npm install        # install dependencies
+npm run build      # compile to dist/
+
+node dist/cli.js inspect lodash                 # readable report
+node dist/cli.js inspect lodash --json          # the same verdict as data, for agents/scripts
+node dist/cli.js inspect is0dd --fail-on high   # exits non-zero if risk is too high (for CI/agents)
+node dist/cli.js inspect foo --llm              # opt-in second opinion using YOUR OWN api key
 ```
+
+The `--llm` flag is strictly opt-in and additive: it only appends a one-line second opinion to
+the human report when `ANTHROPIC_API_KEY` is set. It never changes the deterministic score,
+the verdict, or the exit code, and the tool works fully without it.
 
 ## What it checks
 
