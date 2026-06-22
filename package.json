@@ -4,7 +4,7 @@
   "description": "Pre-flight inspector for npm packages: statically checks a package before you run or install it, and reports its risk level and what it can touch. Never executes the package.",
   "type": "module",
   "bin": {
-    "pkgcheck": "./dist/cli.js"
+    "pkgcheck": "dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
