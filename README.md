@@ -1,4 +1,4 @@
-# pkgcheck
+# pkgvet
 
 A pre-flight inspector for npm packages. Downloads and statically analyzes a package
 **without executing any code**, then reports what it can touch and how risky it looks.
@@ -7,29 +7,29 @@ A pre-flight inspector for npm packages. Downloads and statically analyzes a pac
 
 ```sh
 # Install
-npm install -g pkgcheck
+npm install -g pkgvet
 
 # Inspect a package
-pkgcheck inspect <package-spec>
+pkgvet inspect <package-spec>
 
 # Or with npx (no install needed)
-npx pkgcheck inspect <package-spec>
+npx pkgvet inspect <package-spec>
 ```
 
 ### Examples
 
 ```sh
 # Human-readable report
-pkgcheck inspect shelljs@0.8.5
+pkgvet inspect shelljs@0.8.5
 
 # JSON output for scripts/agents
-pkgcheck inspect shelljs --json
+pkgvet inspect shelljs --json
 
 # Fail CI if risk level meets a threshold (exit 1)
-pkgcheck inspect is0dd --fail-on med
+pkgvet inspect is0dd --fail-on med
 
 # Opt-in LLM second opinion (requires API key)
-pkgcheck inspect shelljs --llm
+pkgvet inspect shelljs --llm
 ```
 
 ### Exit codes
@@ -81,7 +81,7 @@ never changes the deterministic score, verdict, or exit code.
 ## Install
 
 ```sh
-npm install -g pkgcheck
+npm install -g pkgvet
 npm run build    # compile TypeScript to dist/
 ```
 
