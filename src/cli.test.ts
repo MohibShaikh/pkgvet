@@ -1,5 +1,9 @@
-import { expect, test, vi } from "vitest";
-import { levelMeetsThreshold, run } from "./cli.js";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { afterAll, expect, test, vi } from "vitest";
+import { isMainModule, levelMeetsThreshold, run } from "./cli.js";
 
 vi.mock("./analyze.js", () => ({
   analyze: async () => ({
@@ -50,6 +54,28 @@ test("command help exits successfully", async () => {
   } finally {
     write.mockRestore();
   }
+});
+
+// Regression: the entry-point guard once compared import.meta.url against a
+// hand-built `file://${path}` string. When the install path contains a space
+// (or any percent-encoded char), import.meta.url is encoded (file:///a%20b)
+// but the concatenation is not (file:///a b), so they never match and the CLI
+// runs nothing — exiting 0 with no output. The guard must encode identically.
+const spacedDir = mkdtempSync(join(tmpdir(), "pkgvet space "));
+afterAll(() => rmSync(spacedDir, { recursive: true, force: true }));
+
+test("isMainModule matches even when the path contains a space", () => {
+  const script = join(spacedDir, "cli.js");
+  writeFileSync(script, "");
+  const importMetaUrl = pathToFileURL(script).href; // what Node actually gives the module
+  expect(isMainModule(importMetaUrl, script)).toBe(true);
+});
+
+test("isMainModule is false when the script is imported, not run directly", () => {
+  const script = join(spacedDir, "cli.js");
+  writeFileSync(script, "");
+  const importMetaUrl = pathToFileURL(join(spacedDir, "other.js")).href;
+  expect(isMainModule(importMetaUrl, script)).toBe(false);
 });
 
 test("usage errors still exit with code 2", async () => {

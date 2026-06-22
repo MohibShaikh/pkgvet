@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { analyze } from "./analyze.js";
 import { renderHuman } from "./reporters/human.js";
@@ -14,9 +16,10 @@ export function levelMeetsThreshold(level: RiskLevel, threshold: RiskLevel): boo
 export async function run(argv: string[]): Promise<number> {
   const program = new Command();
   program
-    .name("pkgcheck")
+    .name("pkgvet")
     .description("Inspect an npm package before you run or install it.")
-    .exitOverride(); // throw instead of calling process.exit, so we own exit codes
+    .exitOverride() // throw instead of calling process.exit, so we own exit codes
+    .showHelpAfterError(true);
 
   let exitCode = 0;
 
@@ -45,7 +48,7 @@ export async function run(argv: string[]): Promise<number> {
           exitCode = levelMeetsThreshold(verdict.risk.level, threshold) ? 1 : 0;
         }
       } catch (err) {
-        process.stderr.write(`pkgcheck: ${(err as Error).message}\n`);
+        process.stderr.write(`pkgvet: ${(err as Error).message}\n`);
         exitCode = 2;
       }
     });
@@ -59,7 +62,16 @@ export async function run(argv: string[]): Promise<number> {
   return exitCode;
 }
 
-// Execute only when run directly (not when imported by tests).
-if (import.meta.url === `file://${process.argv[1]}`) {
+// True when this module is the program entry point (run directly), false when
+// imported (e.g. by tests). Build the comparison URL with pathToFileURL so it
+// percent-encodes exactly like import.meta.url — a hand-built `file://${path}`
+// string does NOT encode spaces/special chars, so any install path containing
+// one would silently fail to match and the CLI would exit 0 printing nothing.
+export function isMainModule(importMetaUrl: string, scriptPath: string): boolean {
+  return importMetaUrl === pathToFileURL(realpathSync(scriptPath)).href;
+}
+
+// Use realpath (inside isMainModule) so it works through npx/npm symlinks.
+if (process.argv[1] && isMainModule(import.meta.url, process.argv[1])) {
   run(process.argv).then((code) => process.exit(code));
 }
