@@ -25,10 +25,16 @@ export async function run(argv: string[]): Promise<number> {
     .argument("<pkg>", "package spec, e.g. lodash or lodash@4.17.21")
     .option("--json", "output the verdict as JSON")
     .option("--fail-on <level>", "exit non-zero if risk >= level (low|med|high)")
-    .action(async (pkg: string, opts: { json?: boolean; failOn?: string }) => {
+    .option("--llm", "opt-in second opinion using your own API key")
+    .action(async (pkg: string, opts: { json?: boolean; failOn?: string; llm?: boolean }) => {
       try {
         const verdict = await analyze(pkg);
         process.stdout.write((opts.json ? renderJson(verdict) : renderHuman(verdict)) + "\n");
+        if (opts.llm && !opts.json) {
+          const { llmOpinion } = await import("./llm.js");
+          const note = await llmOpinion(verdict);
+          if (note) process.stdout.write(`  llm: ${note}\n`);
+        }
         if (opts.failOn) {
           const threshold = (["low", "med", "high"].includes(opts.failOn) ? opts.failOn : "high") as RiskLevel;
           exitCode = levelMeetsThreshold(verdict.risk.level, threshold) ? 1 : 0;
