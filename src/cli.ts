@@ -31,9 +31,14 @@ export async function run(argv: string[]): Promise<number> {
         const verdict = await analyze(pkg);
         process.stdout.write((opts.json ? renderJson(verdict) : renderHuman(verdict)) + "\n");
         if (opts.llm && !opts.json) {
-          const { llmOpinion } = await import("./llm.js");
-          const note = await llmOpinion(verdict);
-          if (note) process.stdout.write(`  llm: ${note}\n`);
+          try {
+            const { llmOpinion } = await import("./llm.js");
+            const note = await llmOpinion(verdict);
+            if (note) process.stdout.write(`  llm: ${note}\n`);
+          } catch {
+            // opt-in second opinion is strictly additive; never let its failure
+            // change the exit code, the verdict, or the core output.
+          }
         }
         if (opts.failOn) {
           const threshold = (["low", "med", "high"].includes(opts.failOn) ? opts.failOn : "high") as RiskLevel;
