@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.log
+.env
+.env.*
+.DS_Store
+
+# Internal/working notes kept local, intentionally not committed to history (per request)
+docs/superpowers/specs/
+CLAUDE.md

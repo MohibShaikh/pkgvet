@@ -1,0 +1,3 @@
+# One focused module per signal family lives here:
+# manifest signals, publisher/recency, typosquat, code-capability scan, obfuscation.
+# Each takes the unpacked package + metadata and returns findings. Independently testable.

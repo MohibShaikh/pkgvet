@@ -1,0 +1,47 @@
+{
+  "name": "pkgcheck",
+  "version": "0.0.0",
+  "description": "Pre-flight inspector for npm packages: statically checks a package before you run or install it, and reports its risk level and what it can touch. Never executes the package.",
+  "type": "module",
+  "bin": {
+    "pkgcheck": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "npm",
+    "npx",
+    "security",
+    "supply-chain",
+    "static-analysis",
+    "cli",
+    "agent"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@babel/parser": "^7.24.0",
+    "commander": "^12.0.0",
+    "leven": "^4.0.0",
+    "pacote": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/pacote": "^11.1.8",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

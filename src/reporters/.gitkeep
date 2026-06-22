@@ -1,0 +1,2 @@
+# Reporters render a verdict to a target format: human-readable text and JSON.
+# Pure functions of the verdict object. SARIF is deferred to a later phase.
