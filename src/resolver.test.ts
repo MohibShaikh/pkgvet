@@ -6,6 +6,7 @@ test("resolves a real pinned package", async () => {
   expect(meta.name).toBe("left-pad");
   expect(meta.version).toBe("1.3.0");
   expect(meta.tarball).toMatch(/^https?:\/\//);
+  expect(typeof meta.publishedAt).toBe("string");
 }, 20000);
 
 test("throws ResolveError for a non-existent package", async () => {
