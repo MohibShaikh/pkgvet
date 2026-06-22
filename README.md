@@ -10,6 +10,27 @@ how risky it looks and what it can touch.
 information. `pkgcheck` replaces that blind moment with an actual answer — for a human at a
 terminal, and for an AI agent about to run an `npx` command.
 
+## What it looks like
+
+> Illustrative — the engine is under construction. Output shape is what we're building toward.
+
+```text
+$ pkgcheck inspect left-pad
+─ left-pad@1.3.0 · 6 kB · published 6y ago by stamat
+  ✓ no install scripts   ✓ not obfuscated   ✓ exact name match
+  permissions: fs:read
+  risk: LOW (8/100)
+
+$ pkgcheck inspect is0dd
+─ is0dd@1.0.0 · 4 kB · published 2h ago by a-new-name
+  ✗ postinstall script      ✗ obfuscated source
+  ✗ looks like a typo of "is-odd" (very popular)
+  permissions: fs:read · net · shell · env
+  risk: HIGH (91/100)
+  why: brand-new publisher + install script reaching the network and reading env
+       is the classic credential-exfiltration shape. Do not run.
+```
+
 ## Status
 
 Early. Scaffold only — the analysis engine is being built against an approved design.
