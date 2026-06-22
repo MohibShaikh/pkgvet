@@ -15,10 +15,17 @@ export class ResolveError extends Error {
   }
 }
 
+interface ResolvedManifest {
+  name: string;
+  version: string;
+  dist?: { tarball?: string };
+  deprecated?: unknown;
+}
+
 export async function resolve(spec: string): Promise<ResolvedMeta> {
-  let manifest: Awaited<ReturnType<typeof pacote.manifest>>;
+  let manifest: ResolvedManifest;
   try {
-    manifest = await pacote.manifest(spec, { fullMetadata: true });
+    manifest = (await pacote.manifest(spec, { fullMetadata: true })) as ResolvedManifest;
   } catch (err) {
     throw new ResolveError(`could not resolve "${spec}": ${(err as Error).message}`, { cause: err });
   }
@@ -40,7 +47,7 @@ export async function resolve(spec: string): Promise<ResolvedMeta> {
     name: manifest.name,
     version: manifest.version,
     publishedAt,
-    deprecated: Boolean((manifest as { deprecated?: unknown }).deprecated),
+    deprecated: Boolean(manifest.deprecated),
     tarball,
   };
 }
