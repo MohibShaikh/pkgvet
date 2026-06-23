@@ -49,7 +49,7 @@ The tool runs four static analysis passes on the unpacked package:
 | **Manifest** | `preinstall`/`install`/`postinstall` scripts, `deprecated` flag |
 | **Publisher** | Version published within last 7 days (new accounts are a risk signal) |
 | **Typosquat** | Levenshtein + homoglyph distance to 20 popular package names |
-| **Capabilities** | AST + regex scan of `.js`/`.ts`/`.cjs`/`.mjs` files for patterns indicating: `fs:read`, `fs:write`, `net`, `shell`, `env`, `obfuscated` |
+| **Capabilities** | AST analysis of `.js`/`.ts`/`.cjs`/`.mjs` files (`.d.ts` type declarations are skipped) — real call sites, imports, and member access, not text matching — for: `fs:read`, `fs:write`, `net`, `shell`, `env`, `obfuscated` |
 
 Each finding has a weight. The scorer combines them into a 0–100 score and a
 `low` / `med` / `high` level, with a bonus for dangerous combinations (e.g.
@@ -77,6 +77,40 @@ never changes the deterministic score, verdict, or exit code.
 - **Offline, free, and deterministic by default.** The `--llm` pass is opt-in.
 - **Conservative weighting.** A benign library that only reads files stays `LOW`.
   Risk is driven by dangerous *combinations*, not single capabilities.
+
+## Security model & dependencies
+
+**What pkgvet protects you from:** the package you point it at. It is downloaded
+and read as bytes and ASTs — never `require`d, `import`ed, `eval`d, or run, and
+its lifecycle scripts are never executed. A malicious *target* package cannot
+run code through pkgvet, and tarball extraction is guarded against path
+traversal (zip-slip).
+
+**What it does not protect you from: itself.** Like any tool, pkgvet runs its own
+dependencies in-process. Today it depends on [`pacote`](https://www.npmjs.com/package/pacote)
+(npm's own package fetcher) for resolution and extraction, which pulls in a large
+transitive tree. `npm audit` currently reports advisories in that tree
+(`tar`, `node-gyp`, `sigstore`, `make-fetch-happen`, …). Being transparent about
+this rather than hiding it:
+
+- They are **transitive through `pacote`**, with **no upstream fix available**
+  (the advisory ranges cover even the latest versions), so they can't be
+  resolved by version bumps or `overrides` yet.
+- Most are **unreachable for this tool** — e.g. `node-gyp` only runs when
+  building native modules during `npm install`, which pkgvet never does — and
+  the rest operate on tarballs fetched from the official registry over HTTPS
+  that are never executed.
+- Dependencies are **pinned with integrity hashes** in `package-lock.json`;
+  install with `npm ci` to install strictly from the lockfile.
+
+Shrinking this dependency surface (replacing `pacote` with lighter primitives)
+is on the roadmap — for a security tool, a small, auditable dependency tree is
+itself a security property.
+
+**The ceiling of static analysis:** pkgvet reports *what a package can do*, not a
+guarantee that it is safe. Sufficiently obfuscated or dynamically-constructed
+code can hide intent from any static scanner — which is why heavy obfuscation is
+itself flagged. Treat the verdict as a strong signal, not a proof.
 
 ## Install
 
