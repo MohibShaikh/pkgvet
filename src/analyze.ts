@@ -10,7 +10,7 @@ import type { Capability, Finding, PackageContext, Verdict } from "./types.js";
 
 export async function analyze(spec: string): Promise<Verdict> {
   const meta = await resolve(spec);
-  const fetched = await fetchPackage(`${meta.name}@${meta.version}`);
+  const fetched = await fetchPackage(meta.tarball, meta.integrity);
 
   try {
     const ctx: PackageContext = {

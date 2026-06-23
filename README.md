@@ -88,26 +88,21 @@ its lifecycle scripts are never executed. A malicious *target* package cannot
 run code through pkgvet, and tarball extraction is guarded against path
 traversal (zip-slip).
 
-**What it does not protect you from: itself.** Like any tool, pkgvet runs its own
-dependencies in-process. Today it depends on [`pacote`](https://www.npmjs.com/package/pacote)
-(npm's own package fetcher) for resolution and extraction, which pulls in a large
-transitive tree. `npm audit` currently reports advisories in that tree
-(`tar`, `node-gyp`, `sigstore`, `make-fetch-happen`, …). Being transparent about
-this rather than hiding it:
+**A deliberately small dependency surface.** Like any tool, pkgvet runs its own
+dependencies in-process, so a small, auditable tree is itself a security
+property. The runtime tree is intentionally minimal:
 
-- They are **transitive through `pacote`**, with **no upstream fix available**
-  (the advisory ranges cover even the latest versions), so they can't be
-  resolved by version bumps or `overrides` yet.
-- Most are **unreachable for this tool** — e.g. `node-gyp` only runs when
-  building native modules during `npm install`, which pkgvet never does — and
-  the rest operate on tarballs fetched from the official registry over HTTPS
-  that are never executed.
-- Dependencies are **pinned with integrity hashes** in `package-lock.json`;
-  install with `npm ci` to install strictly from the lockfile.
+- [`@babel/parser`](https://www.npmjs.com/package/@babel/parser) — parse code to ASTs
+- [`tar`](https://www.npmjs.com/package/tar) — unpack tarballs (pinned to a version with all known path-traversal advisories fixed)
+- [`semver`](https://www.npmjs.com/package/semver) — resolve version ranges
+- [`commander`](https://www.npmjs.com/package/commander) — CLI parsing
+- [`leven`](https://www.npmjs.com/package/leven) — edit distance for typosquat detection
 
-Shrinking this dependency surface (replacing `pacote` with lighter primitives)
-is on the roadmap — for a security tool, a small, auditable dependency tree is
-itself a security property.
+Resolution and download go straight to the registry over HTTPS (`fetch`), and the
+downloaded tarball is **verified against the registry's integrity hash** before
+extraction. `npm audit` reports **no known vulnerabilities**. Dependencies are
+pinned with integrity hashes in `package-lock.json`; install with `npm ci` to
+install strictly from the lockfile.
 
 **The ceiling of static analysis:** pkgvet reports *what a package can do*, not a
 guarantee that it is safe. Sufficiently obfuscated or dynamically-constructed

@@ -12,3 +12,6 @@ CLAUDE.md
 
 # JetBrains IDE files
 .idea/
+
+# local launch/marketing notes — never publish
+LAUNCH.txt

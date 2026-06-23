@@ -1,6 +1,6 @@
 {
   "name": "pkgvet",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Pre-flight inspector for npm packages: statically checks a package before you run or install it, and reports its risk level and what it can touch. Never executes the package.",
   "type": "module",
   "repository": {
@@ -42,11 +42,12 @@
     "@babel/parser": "^7.24.0",
     "commander": "^12.0.0",
     "leven": "^4.0.0",
-    "pacote": "^18.0.0"
+    "semver": "^7.8.5",
+    "tar": "^7.5.16"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "@types/pacote": "^11.1.8",
+    "@types/semver": "^7.7.1",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",
     "vitest": "^4.1.9"
