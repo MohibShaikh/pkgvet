@@ -1,8 +1,14 @@
 {
   "name": "pkgvet",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Pre-flight inspector for npm packages: statically checks a package before you run or install it, and reports its risk level and what it can touch. Never executes the package.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MohibShaikh/pkgvet.git"
+  },
+  "homepage": "https://github.com/MohibShaikh/pkgvet#readme",
+  "bugs": "https://github.com/MohibShaikh/pkgvet/issues",
   "bin": {
     "pkgvet": "dist/cli.js"
   },
@@ -36,8 +42,7 @@
     "@babel/parser": "^7.24.0",
     "commander": "^12.0.0",
     "leven": "^4.0.0",
-    "pacote": "^18.0.0",
-    "pkgvet": "^0.1.0"
+    "pacote": "^18.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
