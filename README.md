@@ -3,6 +3,8 @@
 A pre-flight inspector for npm packages. Downloads and statically analyzes a package
 **without executing any code**, then reports what it can touch and how risky it looks.
 
+![pkgvet inspecting packages](docs/pkgvet-demo.gif)
+
 ## Usage
 
 ```sh
