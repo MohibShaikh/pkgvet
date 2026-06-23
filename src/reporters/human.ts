@@ -10,6 +10,8 @@ export function renderHuman(v: Verdict): string {
     lines.push("  permissions: (none detected)");
   }
   lines.push(`  risk: ${v.risk.level.toUpperCase()} (${v.risk.score}/100)`);
+  if (p.publisher) lines.push(`  last published by: ${p.publisher}`);
+  lines.push(`  source: ${p.repository ?? "no public source repository listed"}`);
   for (const f of v.findings) {
     lines.push(`  • ${f.reason}`);
   }

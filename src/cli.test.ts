@@ -86,3 +86,24 @@ test("usage errors still exit with code 2", async () => {
     write.mockRestore();
   }
 });
+
+test("a stray -- that buries options does not silently succeed", async () => {
+  // `npx pkgvet -- inspect x --fail-on med` forwards the `--`, which makes
+  // commander treat `--fail-on med` as operands. That must error (exit 2),
+  // never silently exit 0 with the gating flag ignored.
+  const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    await expect(run(["node", "cli", "--", "inspect", "x", "--fail-on", "med"])).resolves.toBe(2);
+  } finally {
+    write.mockRestore();
+  }
+});
+
+test("an unknown option errors instead of being ignored", async () => {
+  const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    await expect(run(["node", "cli", "inspect", "x", "--bogus"])).resolves.toBe(2);
+  } finally {
+    write.mockRestore();
+  }
+});

@@ -22,3 +22,18 @@ test("human report includes name, level, score, capability, and a reason", () =>
   expect(out).toContain("net");
   expect(out).toContain("is-odd");
 });
+
+test("human report shows the last publisher and the source repository when known", () => {
+  const out = renderHuman({
+    ...verdict,
+    package: { ...verdict.package, publisher: "mohibzz", repository: "https://github.com/u/r" },
+  });
+  expect(out).toContain("mohibzz");
+  expect(out).toContain("https://github.com/u/r");
+});
+
+test("human report flags when no public source repository is listed", () => {
+  // "is it open source or not" is exactly the visibility Theo asked for: a
+  // package with no public repo should say so, not stay silent.
+  expect(renderHuman(verdict)).toMatch(/no public (source )?repository/i);
+});

@@ -25,6 +25,7 @@ export async function run(argv: string[]): Promise<number> {
 
   program
     .command("inspect")
+    .allowExcessArguments(false) // a stray `--` must error, not silently drop --fail-on
     .argument("<pkg>", "package spec, e.g. lodash or lodash@4.17.21")
     .option("--json", "output the verdict as JSON")
     .option("--fail-on <level>", "exit non-zero if risk >= level (low|med|high)")

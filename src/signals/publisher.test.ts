@@ -12,9 +12,12 @@ test("a years-old release is not flagged", () => {
   expect(out).toEqual([]);
 });
 
-test("a release from 2 hours ago is flagged as new", () => {
+test("a release from 2 hours ago is flagged as new, but only as a soft signal", () => {
+  // Recency is contextual, not damning: routine new versions of trusted
+  // packages (lodash, @types/node) are published constantly. The weight must
+  // stay low enough that newness alone can't flip an otherwise-low package.
   const out = publisherSignal(ctx({ publishedAt: "2026-06-21T22:00:00Z" }), NOW);
-  expect(out.find((f) => f.id === "new-release")?.weight).toBe(15);
+  expect(out.find((f) => f.id === "new-release")?.weight).toBe(8);
 });
 
 test("missing publish date -> no finding", () => {

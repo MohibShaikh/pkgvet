@@ -33,6 +33,7 @@ export interface Verdict {
     sizeBytes?: number;
     publishedAt?: string;
     publisher?: string;
+    repository?: string;
   };
   capabilities: Capability[];
   findings: Finding[];

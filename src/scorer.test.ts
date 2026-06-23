@@ -30,3 +30,16 @@ test("the exfil combo (install-script + net + env) scores high", () => {
 test("network alone is not high", () => {
   expect(score([f("cap:net", 8, "net")]).level).toBe("low");
 });
+
+test("a fresh release of an otherwise-low-capability package is not flipped to med by recency", () => {
+  // A routine new version of a normal package (net + env + fs, base 26 = low)
+  // must not jump to med just because it was published recently (weight 8).
+  const findings = [
+    f("new-release", 8),
+    f("cap:net", 8, "net"),
+    f("cap:env", 10, "env"),
+    f("cap:fs:read", 2, "fs:read"),
+    f("cap:fs:write", 6, "fs:write"),
+  ];
+  expect(score(findings).level).toBe("low");
+});

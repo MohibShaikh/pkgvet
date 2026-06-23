@@ -12,8 +12,10 @@ export function publisherSignal(ctx: PackageContext, now: Date = new Date()): Fi
     return [
       {
         id: "new-release",
-        weight: 15,
-        reason: "this version was published very recently (< 7 days ago)",
+        // Soft, contextual signal: trusted packages publish routine versions
+        // constantly, so newness must not by itself flip a package's level.
+        weight: 8,
+        reason: "this version was published recently (< 7 days ago)",
       },
     ];
   }

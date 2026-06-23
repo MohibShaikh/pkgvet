@@ -44,6 +44,8 @@ export async function analyze(spec: string): Promise<Verdict> {
         version: meta.version,
         sizeBytes: fetched.sizeBytes,
         publishedAt: meta.publishedAt,
+        publisher: meta.publisher,
+        repository: meta.repository,
       },
       capabilities,
       findings,
