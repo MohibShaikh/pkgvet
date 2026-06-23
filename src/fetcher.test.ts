@@ -4,8 +4,40 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { create } from "tar";
-import { extractTarball, fetchPackage, FetchError, dirSize, isUnsafeEntryPath, verifyIntegrity } from "./fetcher.js";
+import {
+  extractTarball,
+  fetchPackage,
+  FetchError,
+  dirSize,
+  isAllowedTarballUrl,
+  isUnsafeEntryPath,
+  verifyIntegrity,
+} from "./fetcher.js";
 import { resolve } from "./resolver.js";
+
+test("isAllowedTarballUrl allows the npm registry and rejects SSRF targets", () => {
+  expect(isAllowedTarballUrl("https://registry.npmjs.org/lodash/-/lodash-4.18.1.tgz")).toBe(true);
+  expect(isAllowedTarballUrl("http://registry.npmjs.org/x/-/x.tgz")).toBe(false); // not https
+  expect(isAllowedTarballUrl("https://169.254.169.254/latest/meta-data/")).toBe(false);
+  expect(isAllowedTarballUrl("http://localhost:8080/x.tgz")).toBe(false);
+  expect(isAllowedTarballUrl("https://evil.example.com/x.tgz")).toBe(false);
+  expect(isAllowedTarballUrl("not a url")).toBe(false);
+});
+
+test("extraction aborts when a tarball exceeds the file-count limit (decompression-bomb guard)", async () => {
+  const src = mkdtempSync(join(tmpdir(), "pkgcheck-many-"));
+  for (let i = 0; i < 5; i++) writeFileSync(join(src, `f${i}.txt`), "x");
+  const tgz = join(src, "many.tgz");
+  await create({ gzip: true, cwd: src, file: tgz }, ["."]);
+  const buf = readFileSync(tgz);
+  const target = mkdtempSync(join(tmpdir(), "pkgcheck-target-"));
+  try {
+    await expect(extractTarball(buf, target, { maxFiles: 2 })).rejects.toBeInstanceOf(FetchError);
+  } finally {
+    rmSync(src, { recursive: true, force: true });
+    rmSync(target, { recursive: true, force: true });
+  }
+}, 30000);
 
 test("extraction refuses a tarball entry that escapes the target dir (zip-slip)", async () => {
   // Build a genuinely malicious tarball whose entry path is "../<sentinel>" —

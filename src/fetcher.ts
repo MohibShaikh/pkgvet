@@ -13,6 +13,25 @@ export interface FetchedPackage {
 export class FetchError extends Error {}
 
 const TIMEOUT_MS = 30_000;
+const MAX_TARBALL_BYTES = 100 * 1024 * 1024; // compressed download cap
+const MAX_EXTRACTED_BYTES = 300 * 1024 * 1024; // unpacked cap (decompression-bomb guard)
+const MAX_FILES = 20_000; // entry-count cap
+
+// Only download tarballs from the npm registry over HTTPS. A package's
+// `dist.tarball` can technically be any URL; without this, a crafted package
+// could point us at an internal address (cloud metadata, localhost) — SSRF,
+// which matters the moment this engine runs server-side.
+export function isAllowedTarballUrl(url: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:") return false;
+  const host = u.hostname;
+  return host === "registry.npmjs.org" || host.endsWith(".npmjs.org") || host.endsWith(".npmjs.com");
+}
 
 export function dirSize(dir: string): number {
   let total = 0;
@@ -54,23 +73,45 @@ export function verifyIntegrity(buf: Buffer, integrity: string): void {
   }
 }
 
-export function extractTarball(gzBuffer: Buffer, dir: string): Promise<void> {
+export function extractTarball(
+  gzBuffer: Buffer,
+  dir: string,
+  opts: { maxBytes?: number; maxFiles?: number } = {},
+): Promise<void> {
+  const maxBytes = opts.maxBytes ?? MAX_EXTRACTED_BYTES;
+  const maxFiles = opts.maxFiles ?? MAX_FILES;
   return new Promise((resolveP, reject) => {
+    let totalBytes = 0;
+    let fileCount = 0;
+    let exceeded = false;
     const stream = extract({
       cwd: dir,
       strip: 1, // npm tarballs nest everything under "package/"
       gzip: true,
-      // Belt-and-suspenders: reject traversal paths and refuse symlinks /
-      // hardlinks entirely. We only read source bytes, never need links — and
-      // links are the vector behind every node-tar path-traversal advisory.
+      // Belt-and-suspenders: reject traversal paths, refuse symlinks/hardlinks
+      // entirely (the vector behind every node-tar traversal advisory), and cap
+      // total size + file count so a decompression bomb can't fill the disk.
       filter: (path, entry) => {
         const type = (entry as { type?: string }).type;
-        return !isUnsafeEntryPath(path) && type !== "SymbolicLink" && type !== "Link";
+        if (isUnsafeEntryPath(path) || type === "SymbolicLink" || type === "Link") return false;
+        if (type === "File") {
+          fileCount += 1;
+          totalBytes += (entry as { size?: number }).size ?? 0;
+          if (fileCount > maxFiles || totalBytes > maxBytes) {
+            exceeded = true;
+            return false;
+          }
+        }
+        return true;
       },
       onwarn: () => {}, // don't pollute output with benign tar warnings
     });
     stream.on("error", reject);
-    stream.on("finish", () => resolveP());
+    stream.on("finish", () =>
+      exceeded
+        ? reject(new FetchError("package exceeds size/file-count limits"))
+        : resolveP(),
+    );
     stream.end(gzBuffer);
   });
 }
@@ -78,11 +119,21 @@ export function extractTarball(gzBuffer: Buffer, dir: string): Promise<void> {
 // Download a tarball by URL and unpack it into an isolated temp dir. Never runs
 // any code or lifecycle scripts; extraction is guarded against path traversal.
 export async function fetchPackage(tarballUrl: string, integrity?: string): Promise<FetchedPackage> {
+  if (!isAllowedTarballUrl(tarballUrl)) {
+    throw new FetchError(`refusing to download tarball from a disallowed URL: ${tarballUrl}`);
+  }
   let body: Buffer;
   try {
     const res = await fetch(tarballUrl, { signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!res.ok) throw new FetchError(`could not download tarball: ${res.status}`);
+    const declared = Number(res.headers.get("content-length") ?? 0);
+    if (declared > MAX_TARBALL_BYTES) {
+      throw new FetchError(`tarball too large: ${declared} bytes`);
+    }
     body = Buffer.from(await res.arrayBuffer());
+    if (body.byteLength > MAX_TARBALL_BYTES) {
+      throw new FetchError(`tarball too large: ${body.byteLength} bytes`);
+    }
   } catch (err) {
     if (err instanceof FetchError) throw err;
     throw new FetchError(`could not download "${tarballUrl}": ${(err as Error).message}`);

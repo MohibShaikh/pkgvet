@@ -4,6 +4,7 @@ import { parse } from "@babel/parser";
 import type { Capability, Finding } from "../types.js";
 
 const SOURCE_EXT = [".js", ".cjs", ".mjs", ".ts"];
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // skip files too large to parse safely
 
 const WEIGHTS: Record<Capability, number> = {
   "fs:read": 2,
@@ -160,7 +161,12 @@ function listSourceFiles(dir: string): string[] {
       const p = join(d, entry);
       const s = lstatSync(p);
       if (s.isDirectory()) walkDir(p);
-      else if (s.isFile() && SOURCE_EXT.some((e) => p.endsWith(e)) && !p.endsWith(".d.ts")) {
+      else if (
+        s.isFile() &&
+        s.size <= MAX_FILE_BYTES && // bound parser memory on pathologically large files
+        SOURCE_EXT.some((e) => p.endsWith(e)) &&
+        !p.endsWith(".d.ts")
+      ) {
         out.push(p);
       }
     }

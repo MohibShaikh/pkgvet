@@ -140,6 +140,14 @@ test("plain minification (long line, ordinary identifiers) is not flagged obfusc
   expect(capabilitiesSignal(d).map((f) => f.id)).not.toContain("obfuscated");
 });
 
+test("oversized source files are skipped (parser DoS bound)", () => {
+  // A pathologically large file could exhaust the parser; we skip it. It starts
+  // with process.env, which would flag `env` if it were scanned.
+  const d = mkdtempSync(join(tmpdir(), "pkgcheck-cap-"));
+  writeFileSync(join(d, "huge.js"), "process.env.SECRET;\n" + "// pad\n".repeat(900_000));
+  expect(capabilitiesSignal(d).map((f) => f.capability)).not.toContain("env");
+});
+
 test("does not follow or fail on symlinks", () => {
   const root = mkdtempSync(join(tmpdir(), "pkgcheck-cap-"));
   const outside = mkdtempSync(join(tmpdir(), "pkgcheck-cap-outside-"));
